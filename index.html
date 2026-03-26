@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mainstream Electric — Sales & Activity Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<!-- Swapped to html2canvas for Image/Screenshot Generation -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  :root {
+    /* Gemini Dark Theme Palette */
+    --bg:       #131314;
+    --surface:  #1e1f20;
+    --card:     #1e1f20;
+    --elevated: #282a2c;
+    --border:   #444746;
+    --border2:  #444746;
+    --text:     #e3e3e3;
+    --muted:    #c4c7c5;
+    --dim:      #8e918f;
+    
+    /* Keep accent colors for the funnel/tags */
+    --green:    #1D9E75;
+    --teal:     #00c8c8;
+    --blue:     #378ADD;
+    --purple:   #7F77DD;
+    --amber:    #BA7517;
+    --red:      #E24B4A;
+    --orange:   #D85A30;
+    --success-bg:    rgba(0, 229, 255, 0.12);
+    --success-border:#00e5ff;
+    --success-text:  #00e5ff;
+    --check-color:   #88a5b5; /* Neon blueish grey checkmark */
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100%;
+  }
+
+  /* ── Layout ── */
+  .shell { max-width: 960px; margin: 0 auto; padding: 24px 20px 60px; }
+
+  /* ── Header ── */
+  .header { margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 20px; }
+  .header-brand { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--teal); margin-bottom: 4px; }
+  .header-title { font-size: 22px; font-weight: 600; color: var(--text); }
+  .header-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  /* ── Tabs ── */
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+  .tab { padding: 10px 20px; font-size: 13px; font-weight: 500; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color 0.15s, border-color 0.15s; user-select: none; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--text); border-bottom-color: var(--teal); }
+
+  /* ── Pages ── */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── Cards ── */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; margin-bottom: 12px; display: flex; flex-direction: column;}
+  .card-title { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 14px; }
+
+  /* ── Inline divider ── */
+  .inner-divider { border: none; border-top: 1px solid var(--border2); margin: 12px 0; }
+
+  /* ── Funnel ── */
+  .funnel-row { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
+  .funnel-lbl { font-size: 12px; color: var(--muted); width: 118px; flex-shrink: 0; }
+  .funnel-right { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+  .funnel-track { width: 100%; height: 18px; background: var(--elevated); border-radius: 4px; overflow: hidden; }
+  .funnel-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
+  .funnel-nums { display: flex; justify-content: space-between; font-size: 11px; }
+  .funnel-actual { font-weight: 600; color: var(--text); }
+  .funnel-target { color: var(--dim); }
+
+  /* ── Update actuals ── */
+  .fi-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .fi-label { font-size: 12px; color: var(--muted); width: 155px; flex-shrink: 0; }
+  .fi-ctrl { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+  .cnt-btn { width: 28px; height: 28px; border: 1px solid var(--border); border-radius: 6px; background: var(--elevated); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text); user-select: none; transition: background 0.12s; }
+  .cnt-btn:hover { background: var(--surface); }
+  .cnt-btn:active { transform: scale(0.95); }
+  .cnt-val { font-size: 14px; font-weight: 600; color: var(--text); min-width: 28px; text-align: center; }
+
+  /* ── Activity Log sections ── */
+  .section { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; margin-bottom: 12px; }
+  .sec-title { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 14px; }
+  .row3f { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .flabel { font-size: 12px; color: var(--muted); }
+
+  input[type=text], input[type=date], input[type=time], select, textarea {
+    width: 100%;
+    font-size: 13px;
+    color: var(--text);
+    background: var(--elevated);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    outline: none;
+    font-family: 'Inter', sans-serif;
+    transition: border-color 0.15s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--teal); }
+  input[type=date]::-webkit-calendar-picker-indicator,
+  input[type=time]::-webkit-calendar-picker-indicator { filter: invert(0.6); }
+  select option { background: var(--card); color: var(--text); }
+  textarea { resize: vertical; min-height: 72px; line-height: 1.5; }
+  ::placeholder { color: var(--dim); }
+
+  /* ── Activity checkboxes ── */
+  .act-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
+  .act-item { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; user-select: none; background: var(--elevated); transition: all 0.15s; }
+  .act-item:hover { border-color: var(--teal); }
+  .act-item.checked { border-color: var(--success-border); background: var(--success-bg); box-shadow: 0 0 8px rgba(0, 229, 255, 0.15); }
+  .act-cb { width: 16px; height: 16px; border: 1px solid var(--border); border-radius: 3px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 11px; color: transparent; background: var(--card); transition: all 0.15s; }
+  .act-item.checked .act-cb { background: var(--success-border); border-color: var(--success-border); color: var(--check-color); box-shadow: 0 0 6px rgba(0, 229, 255, 0.5); text-shadow: 0 0 2px rgba(0,0,0,0.3); }
+  .act-label { font-size: 12px; color: var(--muted); transition: color 0.15s; }
+  .act-item.checked .act-label { color: var(--success-text); font-weight: 500; text-shadow: 0 0 6px rgba(0, 229, 255, 0.2); }
+
+  /* ── Counters ── */
+  .ctr-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border2); }
+  .ctr-row:last-child { border-bottom: none; }
+  .ctr-label { font-size: 13px; color: var(--text); }
+
+  /* ── Summary cards ── */
+  .sum-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; margin-bottom: 14px; }
+  .sum-card { background: var(--elevated); border: 1px solid var(--border2); border-radius: 8px; padding: 12px 14px; }
+  .sum-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+  .sum-val { font-size: 22px; font-weight: 600; color: var(--text); }
+  .sum-sub { font-size: 11px; color: var(--dim); margin-top: 2px; }
+
+  /* ── Hours display ── */
+  .hrs-display { font-size: 22px; font-weight: 600; color: var(--text); }
+  .pay-display { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+  /* ── Submit button ── */
+  .submit-btn { width: 100%; padding: 12px; border: 1px solid var(--teal); border-radius: 8px; background: rgba(0,200,200,0.08); font-size: 14px; font-weight: 600; color: var(--teal); cursor: pointer; letter-spacing: 0.5px; transition: background 0.15s; margin-top: auto; }
+  .submit-btn:hover { background: rgba(0,200,200,0.16); }
+  .submit-btn:active { transform: scale(0.99); }
+
+  /* ── Toast notification ── */
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--card); border: 1px solid var(--teal); border-radius: 8px; padding: 12px 18px; font-size: 13px; color: var(--teal); font-weight: 500; opacity: 0; transform: translateY(10px); transition: all 0.3s; pointer-events: none; z-index: 999; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  /* ── Footer ── */
+  .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border2); font-size: 11px; color: var(--dim); text-align: center; line-height: 2; }
+
+  /* ── Responsive ── */
+  @media (max-width: 600px) {
+    .row3f { grid-template-columns: 1fr; }
+    .row2 { grid-template-columns: 1fr; }
+    .act-grid { grid-template-columns: 1fr 1fr; }
+    .sum-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <div class="header">
+    <div class="header-brand">Mainstream Electric · Sacramento Commercial</div>
+    <div class="header-title">Sales & Activity Tracker</div>
+    <div class="header-sub">Raphael Nava · 714.926.1290 · March 2026</div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('tracker',this)">Tracker & Notes</div>
+    <div class="tab" onclick="switchTab('wrapup',this)">Session Wrap-up</div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       TRACKER TAB
+  ══════════════════════════════════════════ -->
+  <div id="page-tracker" class="page active">
+
+    <div class="row2">
+      <!-- 1. Reference Funnel -->
+      <div class="card">
+        <div class="card-title">Reference Goals</div>
+        
+        <div class="funnel-row">
+          <div class="funnel-lbl">Touches needed</div>
+          <div class="funnel-right">
+            <div class="funnel-track"><div class="funnel-fill" style="width:100%;background:#378ADD;"></div></div>
+            <div class="funnel-nums"><span class="funnel-actual">500</span><span class="funnel-target">baseline</span></div>
+          </div>
+        </div>
+        <div class="funnel-row">
+          <div class="funnel-lbl">Conversations (DMs)</div>
+          <div class="funnel-right">
+            <div class="funnel-track"><div class="funnel-fill" style="width:51%;background:#7F77DD;"></div></div>
+            <div class="funnel-nums"><span class="funnel-actual">35</span><span class="funnel-target">target (~50%)</span></div>
+          </div>
+        </div>
+        <div class="funnel-row">
+          <div class="funnel-lbl">Forms filled</div>
+          <div class="funnel-right">
+            <div class="funnel-track"><div class="funnel-fill" style="width:29%;background:#1D9E75;"></div></div>
+            <div class="funnel-nums"><span class="funnel-actual">20</span><span class="funnel-target">target</span></div>
+          </div>
+        </div>
+        <div class="funnel-row">
+          <div class="funnel-lbl">Site walks</div>
+          <div class="funnel-right">
+            <div class="funnel-track"><div class="funnel-fill" style="width:22%;background:#BA7517;"></div></div>
+            <div class="funnel-nums"><span class="funnel-actual">15</span><span class="funnel-target">target (~40%)</span></div>
+          </div>
+        </div>
+        <div class="funnel-row">
+          <div class="funnel-lbl">Proposals</div>
+          <div class="funnel-right">
+            <div class="funnel-track"><div class="funnel-fill" style="width:14%;background:#E24B4A;"></div></div>
+            <div class="funnel-nums"><span class="funnel-actual">10</span><span class="funnel-target">target (~65%)</span></div>
+          </div>
+        </div>
+        <div class="funnel-row">
+          <div class="funnel-lbl">Contracts signed</div>
+          <div class="funnel-right">
+            <div class="funnel-track"><div class="funnel-fill" style="width:4%;background:#533AB7;"></div></div>
+            <div class="funnel-nums"><span class="funnel-actual">3</span><span class="funnel-target">target (~30%)</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Daily Activity Counts -->
+      <div class="card">
+        <div class="card-title">Daily Activity Counts</div>
+        <div class="ctr-row"><div class="ctr-label">In-person visits</div><div class="fi-ctrl"><div class="cnt-btn" onclick="adj('visits',-1)">−</div><div class="cnt-val" id="visits-val">0</div><div class="cnt-btn" onclick="adj('visits',1)">+</div></div></div>
+        <div class="ctr-row"><div class="ctr-label">Postcards / business cards dropped</div><div class="fi-ctrl"><div class="cnt-btn" onclick="adj('cards',-1)">−</div><div class="cnt-val" id="cards-val">0</div><div class="cnt-btn" onclick="adj('cards',1)">+</div></div></div>
+        <div class="ctr-row"><div class="ctr-label">Calls made</div><div class="fi-ctrl"><div class="cnt-btn" onclick="adj('calls',-1)">−</div><div class="cnt-val" id="calls-val">0</div><div class="cnt-btn" onclick="adj('calls',1)">+</div></div></div>
+        <div class="ctr-row"><div class="ctr-label">Voicemails left</div><div class="fi-ctrl"><div class="cnt-btn" onclick="adj('vm',-1)">−</div><div class="cnt-val" id="vm-val">0</div><div class="cnt-btn" onclick="adj('vm',1)">+</div></div></div>
+        <div class="ctr-row"><div class="ctr-label">Emails sent</div><div class="fi-ctrl"><div class="cnt-btn" onclick="adj('emails',-1)">−</div><div class="cnt-val" id="emails-val">0</div><div class="cnt-btn" onclick="adj('emails',1)">+</div></div></div>
+        <div class="ctr-row"><div class="ctr-label">LinkedIn DMs / connects</div><div class="fi-ctrl"><div class="cnt-btn" onclick="adj('dms',-1)">−</div><div class="cnt-val" id="dms-val">0</div><div class="cnt-btn" onclick="adj('dms',1)">+</div></div></div>
+        <div class="ctr-row"><div class="ctr-label">Follow-up texts sent</div><div class="fi-ctrl"><div class="cnt-btn" onclick="adj('texts',-1)">−</div><div class="cnt-val" id="texts-val">0</div><div class="cnt-btn" onclick="adj('texts',1)">+</div></div></div>
+        <div class="ctr-row"><div class="ctr-label">Decision makers talked to</div><div class="fi-ctrl"><div class="cnt-btn" onclick="adj('dm_talks',-1)">−</div><div class="cnt-val" id="dm_talks-val">0</div><div class="cnt-btn" onclick="adj('dm_talks',1)">+</div></div></div>
+        <div class="ctr-row"><div class="ctr-label">Forms filled (inbound)</div><div class="fi-ctrl"><div class="cnt-btn" onclick="adj('forms_in',-1)">−</div><div class="cnt-val" id="forms_in-val">0</div><div class="cnt-btn" onclick="adj('forms_in',1)">+</div></div></div>
+        <div class="ctr-row" style="border-bottom:none; padding-bottom:0;"><div class="ctr-label">Site walks booked</div><div class="fi-ctrl"><div class="cnt-btn" onclick="adj('walks_b',-1)">−</div><div class="cnt-val" id="walks_b-val">0</div><div class="cnt-btn" onclick="adj('walks_b',1)">+</div></div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="sec-title">Locations visited</div>
+      <input type="text" id="locations" placeholder="e.g. McClellan Park, Watt 80, Costco Folsom">
+    </div>
+
+    <div class="section">
+      <div class="sec-title">Wins / hot leads this session</div>
+      <textarea id="wins" placeholder="e.g. Spoke with Thomas at HD Distribution — interested in LED audit, call back Thursday..."></textarea>
+    </div>
+
+    <div class="section">
+      <div class="sec-title">Follow-ups needed</div>
+      <textarea id="followups" placeholder="e.g. Call Riley Stille (Nugget) Thursday 9am — Touch 2..."></textarea>
+    </div>
+
+    <div class="section">
+      <div class="sec-title">Notes for the day</div>
+      <textarea id="notes" placeholder="Observations, objections heard, ideas, next steps..."></textarea>
+    </div>
+
+  </div><!-- /page-tracker -->
+
+  <!-- ══════════════════════════════════════════
+       WRAP-UP TAB
+  ══════════════════════════════════════════ -->
+  <div id="page-wrapup" class="page">
+    
+    <div class="section">
+      <div class="sec-title">Session info</div>
+      <div class="row3f" style="margin-bottom:12px;">
+        <div class="field"><div class="flabel">Date</div><input type="date" id="log-date"></div>
+        <div class="field"><div class="flabel">Clock in</div><input type="time" id="clock-in"></div>
+        <div class="field"><div class="flabel">Clock out</div><input type="time" id="clock-out"></div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <div class="flabel">Session type</div>
+          <select id="session-type">
+            <option value="">Select type</option>
+            <option>Virtual — calls / email / DMs</option>
+            <option>In person — field drops / site visits</option>
+            <option>Mixed — virtual + in person</option>
+            <option>Driving — between service calls</option>
+          </select>
+        </div>
+        <div style="padding-top:20px;">
+          <div class="hrs-display" id="hrs-display">0.0 hrs</div>
+          <div class="pay-display" id="pay-display">$0.00 at $24/hr</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="sec-title">Activity completed (Checklist)</div>
+      <div class="act-grid">
+        <div class="act-item" onclick="toggleAct(this)" data-val="Calls made"><div class="act-cb">✓</div><div class="act-label">Calls made</div></div>
+        <div class="act-item" onclick="toggleAct(this)" data-val="Emails sent"><div class="act-cb">✓</div><div class="act-label">Emails sent</div></div>
+        <div class="act-item" onclick="toggleAct(this)" data-val="LinkedIn DMs"><div class="act-cb">✓</div><div class="act-label">LinkedIn DMs</div></div>
+        <div class="act-item" onclick="toggleAct(this)" data-val="LinkedIn connects"><div class="act-cb">✓</div><div class="act-label">LinkedIn connects</div></div>
+        <div class="act-item" onclick="toggleAct(this)" data-val="In-person visits"><div class="act-cb">✓</div><div class="act-label">In-person visits</div></div>
+        <div class="act-item" onclick="toggleAct(this)" data-val="Postcards / business cards dropped"><div class="act-cb">✓</div><div class="act-label">Postcards / cards</div></div>
+        <div class="act-item" onclick="toggleAct(this)" data-val="Site walk"><div class="act-cb">✓</div><div class="act-label">Site walk</div></div>
+        <div class="act-item" onclick="toggleAct(this)" data-val="Proposal sent"><div class="act-cb">✓</div><div class="act-label">Proposal sent</div></div>
+        <div class="act-item" onclick="toggleAct(this)" data-val="Form lead received"><div class="act-cb">✓</div><div class="act-label">Form lead received</div></div>
+        <div class="act-item" onclick="toggleAct(this)" data-val="Follow-up texts"><div class="act-cb">✓</div><div class="act-label">Follow-up texts</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="sec-title">Session summary</div>
+      <div class="sum-grid">
+        <div class="sum-card"><div class="sum-label">Hours</div><div class="sum-val" id="sum-hrs">0.0</div><div class="sum-sub">of 12 max/wk</div></div>
+        <div class="sum-card"><div class="sum-label">Pay</div><div class="sum-val" id="sum-pay">$0</div><div class="sum-sub">at $24/hr</div></div>
+        <div class="sum-card"><div class="sum-label">Touches</div><div class="sum-val" id="sum-touches">0</div><div class="sum-sub">total outreach</div></div>
+        <div class="sum-card"><div class="sum-label">Forms in</div><div class="sum-val" id="sum-forms">0</div><div class="sum-sub">this session</div></div>
+      </div>
+      
+      <!-- SUBMIT TO WEBHOOK -->
+      <button class="submit-btn" onclick="submitLog()">Save & Submit to ClickUp →</button>
+    </div>
+
+  </div><!-- /page-wrapup -->
+
+  <div class="footer">
+    Mainstream Electric · NMSDC Certified · 25 Years NorCal<br>
+    Raphael Nava · 714.926.1290 · info@callmainstream.com · callmainstream.com
+  </div>
+
+</div><!-- /shell -->
+
+<div class="toast" id="toast">Log saved successfully!</div>
+
+<script>
+// ==========================================
+// CONFIGURATION: Replace with your Make.com Webhook URL
+// ==========================================
+const MAKE_WEBHOOK_URL = 'https://hook.us2.make.com/eypujgmqe8josq4qe62guty8drmgqdpm';
+
+// Data models
+const counts = { calls:0, dm_talks:0, vm:0, emails:0, dms:0, texts:0, visits:0, cards:0, forms_in:0, walks_b:0 };
+
+function switchTab(t, el) {
+  document.querySelectorAll('.tab').forEach(e => e.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(e => e.classList.remove('active'));
+  document.getElementById('page-'+t).classList.add('active');
+  el.classList.add('active');
+}
+
+function autoCheckActivity(key) {
+  const map = {
+    'calls': ['Calls made'], 
+    'dm_talks': ['Calls made'],
+    'vm': ['Calls made'],
+    'emails': ['Emails sent'], 
+    'dms': ['LinkedIn DMs', 'LinkedIn connects'], // Checks both for a generalized DM/Connect touch
+    'texts': ['Follow-up texts'],
+    'visits': ['In-person visits'],
+    'cards': ['Postcards / business cards dropped'], 
+    'forms_in': ['Form lead received'], 
+    'walks_b': ['Site walk']
+  };
+  
+  const activities = map[key] || [];
+  activities.forEach(actVal => {
+    const el = document.querySelector(`.act-item[data-val="${actVal}"]`);
+    if (el && !el.classList.contains('checked')) el.classList.add('checked');
+  });
+}
+
+function adj(k, d) {
+  counts[k] = Math.max(0, counts[k] + d);
+  document.getElementById(k+'-val').textContent = counts[k];
+  updateSummary();
+  
+  // Auto-check the related activity box if count goes above 0
+  if (counts[k] > 0) {
+    autoCheckActivity(k);
+  }
+}
+
+function toggleAct(el) { el.classList.toggle('checked'); }
+
+function calcHours() {
+  const ci = document.getElementById('clock-in').value;
+  const co = document.getElementById('clock-out').value;
+  if (!ci || !co) return 0;
+  const [h1,m1] = ci.split(':').map(Number);
+  const [h2,m2] = co.split(':').map(Number);
+  return Math.max(0, ((h2*60+m2)-(h1*60+m1))/60);
+}
+
+function updateSummary() {
+  const hrs = calcHours();
+  const pay = hrs * 24;
+  document.getElementById('hrs-display').textContent  = hrs.toFixed(1) + ' hrs';
+  document.getElementById('pay-display').textContent  = '$' + pay.toFixed(2) + ' at $24/hr';
+  document.getElementById('sum-hrs').textContent      = hrs.toFixed(1);
+  document.getElementById('sum-pay').textContent      = '$' + Math.round(pay);
+  document.getElementById('sum-touches').textContent  = counts.calls + counts.emails + counts.dms + counts.texts + counts.visits + counts.cards;
+  document.getElementById('sum-forms').textContent    = counts.forms_in;
+}
+
+document.getElementById('clock-in').addEventListener('change', updateSummary);
+document.getElementById('clock-out').addEventListener('change', updateSummary);
+document.getElementById('log-date').value = new Date().toISOString().split('T')[0];
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// Submits the log via Webhook, generates a JPEG screenshot, and falls back to clipboard
+function submitLog() {
+  const date    = document.getElementById('log-date').value || new Date().toISOString().split('T')[0];
+  const ci      = document.getElementById('clock-in').value;
+  const co      = document.getElementById('clock-out').value;
+  const type    = document.getElementById('session-type').value;
+  const hrs     = calcHours();
+  const pay     = (hrs*24).toFixed(2);
+  const touches = counts.calls + counts.emails + counts.dms + counts.texts + counts.visits + counts.cards;
+  const checked = Array.from(document.querySelectorAll('.act-item.checked')).map(e=>e.dataset.val);
+  const locs    = document.getElementById('locations').value;
+  const wins    = document.getElementById('wins').value;
+  const fu      = document.getElementById('followups').value;
+  const notes   = document.getElementById('notes').value;
+
+  // 1. Build a clean, combined layout off-screen just for the screenshot
+  const printDiv = document.createElement('div');
+  printDiv.style.fontFamily = 'Helvetica, Arial, sans-serif';
+  printDiv.style.color = '#333';
+  printDiv.style.padding = '40px';
+  printDiv.style.background = '#fff';
+  printDiv.style.width = '800px'; // Fixed width for a consistent screenshot
+  printDiv.style.position = 'absolute';
+  printDiv.style.top = '-10000px'; // Hide it off-screen
+  printDiv.innerHTML = `
+    <h1 style="color: #00c8c8; margin-bottom: 5px; font-size: 26px;">Mainstream Electric</h1>
+    <h2 style="margin-top: 0; color: #555; font-size: 18px;">Session Wrap-Up Screenshot</h2>
+    <hr style="border: 1px solid #ddd; margin-bottom: 20px;">
+    
+    <div style="display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 15px;">
+      <div>
+        <p style="margin: 4px 0;"><strong>Date:</strong> ${date}</p>
+        <p style="margin: 4px 0;"><strong>Time:</strong> ${ci||'?'} to ${co||'?'}</p>
+        <p style="margin: 4px 0;"><strong>Type:</strong> ${type||'Not set'}</p>
+      </div>
+      <div style="text-align: right;">
+        <p style="margin: 4px 0;"><strong>Hours:</strong> ${hrs.toFixed(1)} hrs</p>
+        <p style="margin: 4px 0;"><strong>Pay Generated:</strong> $${pay}</p>
+        <p style="margin: 4px 0;"><strong>Total Touches:</strong> ${touches}</p>
+      </div>
+    </div>
+
+    <h3 style="border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 25px; color: #444;">Activity Counts</h3>
+    <ul style="line-height: 1.8; font-size: 15px;">
+      <li><strong>In-person visits:</strong> ${counts.visits}</li>
+      <li><strong>Postcards / business cards dropped:</strong> ${counts.cards}</li>
+      <li><strong>Calls made:</strong> ${counts.calls} &nbsp;|&nbsp; <strong>Voicemails:</strong> ${counts.vm}</li>
+      <li><strong>Emails sent:</strong> ${counts.emails}</li>
+      <li><strong>LinkedIn DMs / Connects:</strong> ${counts.dms}</li>
+      <li><strong>Follow-up texts sent:</strong> ${counts.texts}</li>
+      <li><strong>Decision makers talked to:</strong> ${counts.dm_talks}</li>
+      <li><strong>Forms filled (inbound):</strong> ${counts.forms_in}</li>
+      <li><strong>Site walks booked:</strong> ${counts.walks_b}</li>
+    </ul>
+
+    <h3 style="border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 25px; color: #444;">Activities Completed</h3>
+    <p style="font-size: 15px;">${checked.length ? checked.join(', ') : 'None'}</p>
+
+    <h3 style="border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 25px; color: #444;">Session Notes</h3>
+    <p style="font-size: 15px;"><strong>Locations Visited:</strong><br> ${locs || 'None'}</p>
+    <p style="font-size: 15px; margin-top: 15px;"><strong>Wins / Hot Leads:</strong><br> ${wins || 'None'}</p>
+    <p style="font-size: 15px; margin-top: 15px;"><strong>Follow-ups Needed:</strong><br> ${fu || 'None'}</p>
+    <p style="font-size: 15px; margin-top: 15px;"><strong>Detailed Notes:</strong><br> ${notes || 'None'}</p>
+  `;
+
+  document.body.appendChild(printDiv);
+  showToast('Taking screenshot and submitting...');
+
+  // 2. Generate JPEG screenshot silently
+  html2canvas(printDiv, { scale: 2, useCORS: true }).then(canvas => {
+    // Cleanup the off-screen div
+    document.body.removeChild(printDiv);
+    
+    // Output as a high quality JPEG
+    const imgData = canvas.toDataURL('image/jpeg', 0.92);
+    const rawBase64 = imgData.split(',')[1];
+
+    // 3. Build the JSON payload for Make.com including the Image
+    const payload = {
+      date: date,
+      clockIn: ci,
+      clockOut: co,
+      sessionType: type,
+      hoursWorked: parseFloat(hrs.toFixed(1)),
+      payGenerated: parseFloat(pay),
+      activitiesChecked: checked,
+      dailyCounts: counts,
+      totalTouches: touches,
+      locationsVisited: locs,
+      winsOrLeads: wins,
+      followUps: fu,
+      notes: notes,
+      imageFilename: `Mainstream_Session_Log_${date}.jpg`, // Updated to JPG
+      imageBase64: rawBase64 // <-- JPEG image file data sent here
+    };
+
+    // 4. Build clipboard text for fallback / convenience
+    const logText = `SESSION LOG — ${date}\nType: ${type||'not set'} | In: ${ci||'?'} → Out: ${co||'?'}\nHours: ${hrs.toFixed(1)} | Pay: $${pay}\nTotal touches: ${touches} | Forms in: ${counts.forms_in}`;
+    navigator.clipboard.writeText(logText).catch(e => console.log('Clipboard copy failed.'));
+
+    // 5. Fire the webhook to Make.com
+    if (MAKE_WEBHOOK_URL && MAKE_WEBHOOK_URL !== 'YOUR_MAKE_WEBHOOK_URL_HERE') {
+      fetch(MAKE_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(response => {
+        if(response.ok) {
+          showToast('Log & Screenshot saved to ClickUp successfully!');
+        } else {
+          showToast('Webhook Error! Status: ' + response.status);
+        }
+      })
+      .catch(error => {
+        console.error('Webhook failed:', error);
+        showToast('Error sending to ClickUp. Copied to clipboard instead.');
+      });
+    } else {
+      showToast('Add your Make Webhook URL in the code! (Copied log to clipboard)');
+    }
+  });
+}
+</script>
+</body>
+</html>
